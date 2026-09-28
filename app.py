@@ -80,7 +80,7 @@ def auth_start():
     with database() as conn:
         conn.execute("DELETE FROM oauth_states WHERE expires_at < now()")
         conn.execute("INSERT INTO oauth_states VALUES (%s, %s)", (state, datetime.now(timezone.utc) + timedelta(minutes=10)))
-    url = AUTH + "?" + urlencode({"response_type": "code", "client_id": setting("MELI_CLIENT_ID"), "redirect_uri": setting("MELI_REDIRECT_URI"), "state": state})
+    url = AUTH + "?" + urlencode({"response_type": "code", "client_id": setting("MELI_CLIENT_ID"), "redirect_uri": setting("MELI_REDIRECT_URI"), "scope": "offline_access read write", "state": state})
     return {"authorization_url": url}
 
 
@@ -95,6 +95,8 @@ async def auth_callback(code: str, state: str):
     if response.status_code != 200:
         raise HTTPException(502, "Falha ao conectar a conta; confira o endereço de retorno cadastrado")
     data = response.json()
+    if not data.get("refresh_token"):
+        raise HTTPException(502, "Mercado Livre não concedeu Refresh Token. Confira o fluxo Refresh Token na aplicação e refaça a autorização da conta.")
     seller_id = int(data["user_id"])
     with database() as conn:
         conn.execute("INSERT INTO seller_tokens VALUES (%s,%s,%s,%s) ON CONFLICT (seller_id) DO UPDATE SET access_token=EXCLUDED.access_token, refresh_token=EXCLUDED.refresh_token, expires_at=EXCLUDED.expires_at", (seller_id, data["access_token"], data["refresh_token"], datetime.now(timezone.utc) + timedelta(seconds=data["expires_in"])))
