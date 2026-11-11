@@ -84,6 +84,32 @@ def auth_start():
     return {"authorization_url": url}
 
 
+from fastapi import Form
+from fastapi.responses import HTMLResponse
+
+LOGIN_HTML = """<!doctype html><html lang="pt-br"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FLY · Conectar Mercado Livre</title>
+<body style="font-family:system-ui;background:#111;color:#eee;display:grid;place-items:center;min-height:100vh;margin:0">
+<form method="post" style="background:#1d1d1d;padding:28px;border-radius:12px;max-width:360px;width:90%">
+<h2 style="margin-top:0">Conectar Mercado Livre</h2>
+<p style="color:#aaa;font-size:14px">Cole a ADMIN_API_KEY (Render → Environment) e clique em Conectar. Você será levado ao Mercado Livre para autorizar.</p>
+<input type="password" name="key" autocomplete="off" required style="width:100%;padding:10px;border-radius:8px;border:1px solid #444;background:#000;color:#eee;box-sizing:border-box">
+<button style="margin-top:14px;width:100%;padding:10px;border:0;border-radius:8px;background:#ffe600;color:#111;font-weight:700">Conectar</button>
+</form></body></html>"""
+
+
+@app.get("/auth/login", response_class=HTMLResponse)
+def auth_login_form():
+    return LOGIN_HTML
+
+
+@app.post("/auth/login")
+def auth_login(key: str = Form(...)):
+    if not secrets.compare_digest(key.strip(), setting("ADMIN_API_KEY")):
+        raise HTTPException(401, "Chave de acesso inválida")
+    return RedirectResponse(auth_start()["authorization_url"], status_code=303)
+
+
 @app.get("/auth/callback")
 async def auth_callback(code: str, state: str):
     with database() as conn:
