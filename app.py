@@ -294,6 +294,10 @@ TOOLS = [
      "inputSchema": {"type": "object", "properties": {"item_id": {"type": "string"}, "preco": {"type": "number"}}, "required": ["item_id", "preco"]}},
     {"name": "alterar_estoque", "description": "Altera o estoque disponível de um anúncio. Só use com autorização do Vitor.",
      "inputSchema": {"type": "object", "properties": {"item_id": {"type": "string"}, "quantidade": {"type": "integer"}}, "required": ["item_id", "quantidade"]}},
+    {"name": "criar_anuncio", "description": "Cria um anúncio novo no Mercado Livre (POST /items). Passe o corpo completo em 'anuncio' (category_id, title/family_name, price, currency_id, available_quantity, buying_mode, listing_type_id, condition, pictures [{source: url}], attributes, sale_terms, shipping). Só use com autorização do Vitor.",
+     "inputSchema": {"type": "object", "properties": {"anuncio": {"type": "object"}}, "required": ["anuncio"]}},
+    {"name": "definir_descricao", "description": "Cria ou troca a descrição (texto simples) de um anúncio. Só use com autorização do Vitor.",
+     "inputSchema": {"type": "object", "properties": {"item_id": {"type": "string"}, "texto": {"type": "string"}}, "required": ["item_id", "texto"]}},
     {"name": "consultar_api", "description": "Consulta somente-leitura (GET) a qualquer recurso da API do Mercado Livre, ex.: Mercado Ads (/advertising/...), reputação (/users/{id}), visitas. Informe path começando com /, params opcionais e headers opcionais (ex.: {\"Api-Version\": \"2\"} para Mercado Ads).",
      "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "params": {"type": "object"}, "headers": {"type": "object"}}, "required": ["path"]}},
 ]
@@ -336,6 +340,16 @@ async def run_tool(name: str, a: dict):
         return await meli("PUT", f"/items/{a['item_id']}", sid, body={"price": float(a["preco"])})
     if name == "alterar_estoque":
         return await meli("PUT", f"/items/{a['item_id']}", sid, body={"available_quantity": int(a["quantidade"])})
+    if name == "criar_anuncio":
+        body = a["anuncio"]
+        if not isinstance(body, dict) or not body.get("category_id"):
+            raise HTTPException(422, "Informe o anúncio com category_id")
+        return await meli("POST", "/items", sid, body=body)
+    if name == "definir_descricao":
+        try:
+            return await meli("PUT", f"/items/{a['item_id']}/description", sid, body={"plain_text": a["texto"]})
+        except HTTPException:
+            return await meli("POST", f"/items/{a['item_id']}/description", sid, body={"plain_text": a["texto"]})
     if name == "consultar_api":
         path = str(a["path"])
         if not path.startswith("/") or "://" in path or "/oauth" in path:
@@ -374,7 +388,7 @@ async def mcp(token: str, request: Request):
             "protocolVersion": params.get("protocolVersion", "2025-06-18"),
             "capabilities": {"tools": {"listChanged": False}},
             "serverInfo": {"name": "fly-mercadolivre", "version": "1.0.0"},
-            "instructions": "Conta do Mercado Livre da FLY Distribuidora. Ferramentas que publicam ou alteram algo (responder_pergunta, enviar_mensagem, alterar_preco, alterar_estoque) só devem ser usadas com texto/valor aprovado pelo Vitor.",
+            "instructions": "Conta do Mercado Livre da FLY Distribuidora. Ferramentas que publicam ou alteram algo (responder_pergunta, enviar_mensagem, alterar_preco, alterar_estoque, criar_anuncio, definir_descricao) só devem ser usadas com texto/valor aprovado pelo Vitor.",
         }))
     if method == "ping":
         return JSONResponse(_rpc(mid, {}))
