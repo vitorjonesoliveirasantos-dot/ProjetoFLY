@@ -33,3 +33,11 @@ Instale `requirements.txt`, defina as variáveis de ambiente em um gerenciador s
 ## Próxima etapa do plugin
 
 Esta API é a base da integração. Para que o plugin do ChatGPT acesse os dados, implante um servidor MCP autenticado sobre ela e configure o endpoint real no `mcp.json` do plugin. Não exponha a API publicamente sem `X-API-Key`, nem inclua a chave no manifesto do plugin.
+
+## Conector MCP para o Claude (11/11/2026)
+
+- Banco: PostgreSQL no Neon (grátis, não expira). Cole a connection string em `DATABASE_URL` no Render.
+- Defina `MCP_TOKEN` no Render (segredo longo, use "Generate").
+- Endereço do conector: `https://projetofly.onrender.com/mcp/<MCP_TOKEN>` — adicione em Claude > Configurações > Conectores > Adicionar conector personalizado.
+- Ferramentas: listar_pedidos, ver_pedido, ver_envio, listar_perguntas, responder_pergunta, mensagens_pedido, enviar_mensagem, listar_reclamacoes, ver_reclamacao, listar_anuncios, ver_anuncio, alterar_preco, alterar_estoque, consultar_api (GET somente leitura; serve para Mercado Ads).
+- Nunca compartilhe o endereço com o token.
